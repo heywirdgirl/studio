@@ -12,10 +12,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
-import { Text, Image as ImageIcon, Plus, Trash2, ArrowUp, Loader2 } from 'lucide-react';
+import { Text, Image as ImageIcon, Plus, Trash2 } from 'lucide-react';
 import { useCart } from '@/hooks/use-cart';
 import { useToast } from '@/hooks/use-toast';
-import { upscaleImageAction } from '@/app/actions';
 
 interface ProductCustomizerProps {
   product: Product;
@@ -28,7 +27,6 @@ const textSchema = z.object({
 export default function ProductCustomizer({ product }: ProductCustomizerProps) {
   const [elements, setElements] = useState<CustomizationElement[]>([]);
   const [selectedElementId, setSelectedElementId] = useState<string | null>(null);
-  const [isUpscaling, setIsUpscaling] = useState<string | null>(null); // Holds ID of image being upscaled
   const { dispatch } = useCart();
   const { toast } = useToast();
   const router = useRouter();
@@ -76,26 +74,6 @@ export default function ProductCustomizer({ product }: ProductCustomizerProps) {
     if (selectedElementId === id) {
       setSelectedElementId(null);
     }
-  };
-  
-  const handleUpscaleImage = async (elementId: string) => {
-    const element = elements.find(el => el.id === elementId);
-    if (!element || element.type !== 'image') return;
-
-    setIsUpscaling(elementId);
-    toast({ title: 'AI Upscaling', description: 'Your image is being upscaled. Please wait...' });
-
-    const result = await upscaleImageAction({ photoDataUri: element.content });
-    
-    if (result.success && result.data) {
-      setElements(prev => prev.map(el => 
-        el.id === elementId ? { ...el, content: result.data.upscaledPhotoDataUri } : el
-      ));
-      toast({ title: 'Success', description: 'Image upscaled successfully!' });
-    } else {
-      toast({ variant: 'destructive', title: 'Error', description: result.error });
-    }
-    setIsUpscaling(null);
   };
   
   const handleAddToCart = () => {
@@ -202,17 +180,6 @@ export default function ProductCustomizer({ product }: ProductCustomizerProps) {
                       <span className="text-sm truncate max-w-[100px]">{el.type === 'text' ? el.content : 'Image'}</span>
                     </div>
                     <div className="flex items-center gap-1">
-                      {el.type === 'image' && (
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          onClick={() => handleUpscaleImage(el.id)}
-                          disabled={!!isUpscaling}
-                          title="Upscale Image with AI"
-                        >
-                          {isUpscaling === el.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowUp className="h-4 w-4" />}
-                        </Button>
-                      )}
                       <Button size="icon" variant="ghost" onClick={() => removeElement(el.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                     </div>
                   </div>

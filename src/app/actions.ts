@@ -1,17 +1,5 @@
 'use server';
 
-import { upscaleImage as upscaleImageFlow, type UpscaleImageInput } from '@/ai/flows/upscale-image';
-
-export async function upscaleImageAction(input: UpscaleImageInput) {
-  try {
-    const result = await upscaleImageFlow(input);
-    return { success: true, data: result };
-  } catch (error) {
-    console.error('Error upscaling image:', error);
-    return { success: false, error: 'Failed to upscale image.' };
-  }
-}
-
 // Mock action for placing an order
 export async function placeOrderAction(data: {
   cartItems: any[];
