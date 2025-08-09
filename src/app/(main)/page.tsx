@@ -8,7 +8,7 @@ export default async function HomePage() {
     <div className="container py-8">
       <section className="text-center mb-12">
         <h1 className="text-4xl font-bold tracking-tight lg:text-5xl font-headline">
-          Bring Your Ideas to Life
+          Bring Your Ideas to Vincent 
         </h1>
         <p className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto">
           Choose a product, add your design, and create something uniquely yours. High-quality custom prints, made easy.
