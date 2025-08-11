@@ -8,6 +8,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import Link from 'next/link';
 import { ShoppingCart } from 'lucide-react';
+import React from 'react';
 
 export default function CartPage() {
   const { state } = useCart();
@@ -33,10 +34,10 @@ export default function CartPage() {
             <Card>
               <CardContent className="p-4">
                 {items.map((item, index) => (
-                  <>
-                    <CartItem key={item.id} item={item} />
+                  <React.Fragment key={item.id}>
+                    <CartItem item={item} />
                     {index < items.length - 1 && <Separator />}
-                  </>
+                  </React.Fragment>
                 ))}
               </CardContent>
             </Card>
