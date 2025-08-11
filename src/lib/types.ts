@@ -22,3 +22,10 @@ export type CustomizationElement = {
   rotation: number;
   scale: number;
 };
+
+// Add this to your types to avoid TypeScript errors with the PayPal script
+declare global {
+    interface Window {
+        paypal?: any;
+    }
+}

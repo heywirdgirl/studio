@@ -7,7 +7,7 @@ import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { placeOrderAction } from '@/app/actions';
+import { createPayPalOrderAction, capturePayPalOrderAction } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 
 import { Button } from '@/components/ui/button';
@@ -50,24 +50,76 @@ export default function CheckoutPage() {
 
   async function onSubmit(values: z.infer<typeof shippingSchema>) {
     setIsSubmitting(true);
-    const result = await placeOrderAction({
-        cartItems: cartState.items,
-        shippingInfo: values,
-        total: totalPrice,
-    });
+    
+    // Calculate total price with tax and shipping
+    const shipping = totalPrice > 0 ? 5.00 : 0;
+    const tax = totalPrice * 0.08;
+    const total = totalPrice + shipping + tax;
+    
+    const result = await createPayPalOrderAction(total);
 
-    if (result.success) {
-        toast({
-            title: 'Order Placed!',
-            description: `Your order #${result.orderId} has been confirmed.`,
-        });
-        dispatch({ type: 'CLEAR_CART' });
-        router.push('/account');
+    if (result.success && result.orderId) {
+        const onApprove = async () => {
+            const captureResult = await capturePayPalOrderAction(
+                result.orderId!,
+                cartState.items,
+                values,
+                total
+            );
+
+            if (captureResult.success) {
+                toast({
+                    title: 'Order Placed!',
+                    description: `Your order #${captureResult.orderId} has been confirmed.`,
+                });
+                dispatch({ type: 'CLEAR_CART' });
+                router.push('/account');
+            } else {
+                toast({
+                    variant: 'destructive',
+                    title: 'Payment Failed',
+                    description: captureResult.message || 'There was a problem capturing your payment.',
+                });
+            }
+        };
+
+        const paypalScript = document.createElement('script');
+        paypalScript.src = `https://www.paypal.com/sdk/js?client-id=${process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID}&currency=USD`;
+        paypalScript.onload = () => {
+            if (window.paypal) {
+                const renderButtons = () => {
+                    const buttonContainer = document.getElementById('paypal-button-container');
+                    if(buttonContainer) {
+                        buttonContainer.innerHTML = '';
+                         window.paypal.Buttons({
+                            createOrder: (data: any, actions: any) => {
+                                return result.orderId;
+                            },
+                            onApprove: async (data: any, actions: any) => {
+                                await onApprove();
+                            },
+                            onError: (err: any) => {
+                                 toast({
+                                    variant: 'destructive',
+                                    title: 'PayPal Error',
+                                    description: 'An error occurred with the PayPal transaction.',
+                                });
+                                console.error('PayPal Buttons Error:', err);
+                            }
+                        }).render('#paypal-button-container');
+                    }
+                }
+                renderButtons();
+                const submitButton = document.getElementById('submit-button');
+                if (submitButton) submitButton.style.display = 'none';
+            }
+        };
+        document.body.appendChild(paypalScript);
     } else {
         toast({
             variant: 'destructive',
             title: 'Order Failed',
-            description: 'There was a problem placing your order. Please try again.',
+            description: result.message || 'There was a problem preparing your order. Please try again.',
         });
     }
     setIsSubmitting(false);
@@ -158,10 +210,11 @@ export default function CheckoutPage() {
                       )}
                     />
                   </div>
-                  <Button type="submit" size="lg" className="w-full mt-6" disabled={isSubmitting}>
+                  <Button id="submit-button" type="submit" size="lg" className="w-full mt-6" disabled={isSubmitting}>
                     {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Pay with PayPal & Place Order
+                    Proceed to Payment
                   </Button>
+                  <div id="paypal-button-container" className="mt-4"></div>
                 </form>
               </Form>
             </CardContent>
