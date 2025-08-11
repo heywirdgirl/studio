@@ -5,8 +5,8 @@ import type { CartItem } from "./lib/types";
 const BASE_URL = 'https://api-m.sandbox.paypal.com'; // Use https://api-m.paypal.com for production
 
 const getPayPalAccessToken = async () => {
-  const clientId = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID;
-  const clientSecret = process.env.PAYPAL_APP_SECRET;
+  const clientId = process.env.PAYPAL_CLIENT_ID;
+  const clientSecret = process.env.PAYPAL_CLIENT_SECRET;
   
   if (!clientId || !clientSecret) {
     throw new Error('Missing PayPal credentials');

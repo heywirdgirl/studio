@@ -5,7 +5,7 @@ async function getProducts(): Promise<Product[]> {
   const response = await fetch('https://api.printful.com/sync/products', {
     method: 'GET',
     headers: {
-      'Authorization': `Bearer ${process.env.PRINTFUL_API_KEY}`,
+      'Authorization': `Bearer ${process.env.PRINTFUL_API_TOKEN}`,
       'Content-Type': 'application/json'
     },
     next: { revalidate: 3600 } // Revalidate every hour
@@ -29,7 +29,13 @@ async function getProducts(): Promise<Product[]> {
 
 
 export default async function HomePage() {
-  const products = await getProducts();
+  let products: Product[] = [];
+  let error: string | null = null;
+  try {
+     products = await getProducts();
+  } catch (e: any) {
+    error = e.message;
+  }
 
   return (
     <div className="container py-8">
@@ -41,11 +47,19 @@ export default async function HomePage() {
           Choose a product, add your design, and create something uniquely yours. High-quality custom prints, made easy.
         </p>
       </section>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-        {products.map((product) => (
-          <ProductCard key={product.id} product={product} />
-        ))}
-      </div>
+      {error ? (
+        <div className="text-center py-16 text-red-500">
+            <h2 className="text-xl font-semibold">Could not fetch products</h2>
+            <p>{error}</p>
+            <p>Please check your Printful API token and try again.</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+          {products.map((product) => (
+            <ProductCard key={product.id} product={product} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
