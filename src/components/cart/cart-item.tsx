@@ -37,7 +37,7 @@ export default function CartItem({ item }: CartItemProps) {
         <Link href={`/products/${item.product.id}`} className="font-semibold hover:underline">
           {item.product.name}
         </Link>
-        <p className="text-muted-foreground text-sm">Customized</p>
+        <p className="text-muted-foreground text-sm">${item.product.price.toFixed(2)} each</p>
         <div className="flex items-center space-x-2 mt-2">
           <Input
             type="number"
@@ -45,13 +45,16 @@ export default function CartItem({ item }: CartItemProps) {
             value={item.quantity}
             onChange={(e) => handleQuantityChange(parseInt(e.target.value, 10))}
             className="h-9 w-16"
+            aria-label="Quantity"
           />
-           <p className="font-medium">${(item.product.price * item.quantity).toFixed(2)}</p>
         </div>
       </div>
-      <Button variant="ghost" size="icon" onClick={handleRemoveItem}>
-        <Trash2 className="h-5 w-5 text-muted-foreground" />
-      </Button>
+      <div className="flex flex-col items-end justify-between h-full">
+         <p className="font-bold text-lg">${(item.product.price * item.quantity).toFixed(2)}</p>
+         <Button variant="ghost" size="icon" onClick={handleRemoveItem} aria-label="Remove item">
+           <Trash2 className="h-5 w-5 text-muted-foreground hover:text-destructive" />
+         </Button>
+      </div>
     </div>
   );
 }
