@@ -7,7 +7,7 @@ import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { placeOrderAction } from '@/app/actions';
+import { createPayPalOrderAction, capturePayPalOrderAction } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 
 import { Button } from '@/components/ui/button';
@@ -33,6 +33,7 @@ export default function CheckoutPage() {
   const router = useRouter();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isPayPalReady, setIsPayPalReady] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -42,36 +43,97 @@ export default function CheckoutPage() {
         router.push('/cart');
     }
   }, [user, authLoading, router, cartState.items.length]);
-
+  
   const form = useForm<z.infer<typeof shippingSchema>>({
     resolver: zodResolver(shippingSchema),
     defaultValues: { fullName: '', address: '', city: '', zipCode: '', country: '' },
   });
 
-  async function onSubmit(values: z.infer<typeof shippingSchema>) {
+  const onPayPalApprove = async (orderId: string) => {
     setIsSubmitting(true);
-    const result = await placeOrderAction({
-        cartItems: cartState.items,
-        shippingInfo: values,
-        total: totalPrice,
-    });
+    const captureResult = await capturePayPalOrderAction(
+        orderId,
+        cartState.items,
+        form.getValues(),
+        totalPrice
+    );
 
-    if (result.success) {
+    if (captureResult.success) {
         toast({
             title: 'Order Placed!',
-            description: `Your order #${result.orderId} has been confirmed.`,
+            description: `Your order #${captureResult.orderId} has been confirmed.`,
         });
         dispatch({ type: 'CLEAR_CART' });
         router.push('/account');
     } else {
         toast({
             variant: 'destructive',
-            title: 'Order Failed',
-            description: 'There was a problem placing your order. Please try again.',
+            title: 'Payment Failed',
+            description: captureResult.message || 'There was a problem capturing your payment.',
         });
     }
     setIsSubmitting(false);
-  }
+  };
+  
+  useEffect(() => {
+      if(typeof window !== 'undefined' && !window.paypal) {
+        const paypalScript = document.createElement('script');
+        paypalScript.src = `https://www.paypal.com/sdk/js?client-id=${process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID}&currency=USD`;
+        paypalScript.onload = () => {
+           setIsPayPalReady(true);
+        };
+        document.body.appendChild(paypalScript);
+      } else if (typeof window !== 'undefined' && window.paypal) {
+          setIsPayPalReady(true);
+      }
+  }, []);
+  
+  useEffect(() => {
+    if (isPayPalReady && window.paypal) {
+      const renderButtons = async () => {
+          const buttonContainer = document.getElementById('paypal-button-container');
+          if (buttonContainer) {
+            buttonContainer.innerHTML = '';
+            try {
+              await window.paypal.Buttons({
+                  createOrder: async (data: any, actions: any) => {
+                    const shipping = totalPrice > 0 ? 5.00 : 0;
+                    const tax = totalPrice * 0.08;
+                    const total = totalPrice + shipping + tax;
+                    
+                    const result = await createPayPalOrderAction(total);
+                    if(result.success && result.orderId) {
+                      return result.orderId;
+                    } else {
+                      toast({
+                        variant: 'destructive',
+                        title: 'Order Failed',
+                        description: result.message || 'There was a problem preparing your order.',
+                      });
+                      return null;
+                    }
+                  },
+                  onApprove: async (data: any, actions: any) => {
+                    await onPayPalApprove(data.orderID);
+                  },
+                  onError: (err: any) => {
+                      toast({
+                        variant: 'destructive',
+                        title: 'PayPal Error',
+                        description: 'An error occurred with the PayPal transaction.',
+                      });
+                      console.error('PayPal Buttons Error:', err);
+                  }
+              }).render('#paypal-button-container');
+            } catch(error) {
+              console.error("Failed to render PayPal buttons", error);
+            }
+          }
+      };
+      renderButtons();
+    }
+  }, [isPayPalReady, cartState, totalPrice]);
+
   
   if (authLoading || !user || cartState.items.length === 0) {
     return (
@@ -100,7 +162,7 @@ export default function CheckoutPage() {
             </CardHeader>
             <CardContent>
               <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                <form className="space-y-4">
                   <FormField
                     control={form.control}
                     name="fullName"
@@ -158,12 +220,13 @@ export default function CheckoutPage() {
                       )}
                     />
                   </div>
-                  <Button type="submit" size="lg" className="w-full mt-6" disabled={isSubmitting}>
-                    {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Pay with PayPal & Place Order
-                  </Button>
                 </form>
               </Form>
+              <div className="mt-6">
+                <h3 className="text-lg font-semibold mb-2">Payment</h3>
+                {!isPayPalReady && <div className="flex items-center justify-center"><Loader2 className="mr-2 h-6 w-6 animate-spin" /><span>Loading Payment Options...</span></div>}
+                <div id="paypal-button-container"></div>
+              </div>
             </CardContent>
           </Card>
         </div>

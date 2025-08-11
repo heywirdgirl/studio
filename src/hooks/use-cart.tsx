@@ -1,14 +1,14 @@
 'use client';
 
 import React, { createContext, useReducer, useContext, type ReactNode } from 'react';
-import type { CartItem, Product, CustomizationElement } from '@/lib/types';
+import type { CartItem, Product } from '@/lib/types';
 
 interface CartState {
   items: CartItem[];
 }
 
 type CartAction =
-  | { type: 'ADD_ITEM'; payload: { product: Product; quantity: number; customization: CustomizationElement[] } }
+  | { type: 'ADD_ITEM'; payload: { product: Product; quantity: number } }
   | { type: 'REMOVE_ITEM'; payload: { itemId: string } }
   | { type: 'UPDATE_QUANTITY'; payload: { itemId: string; quantity: number } }
   | { type: 'CLEAR_CART' };
@@ -23,9 +23,24 @@ const CartContext = createContext<{
 const cartReducer = (state: CartState, action: CartAction): CartState => {
   switch (action.type) {
     case 'ADD_ITEM': {
+      const { product, quantity } = action.payload;
+      const existingItem = state.items.find(item => item.product.id === product.id);
+
+      if (existingItem) {
+        return {
+          ...state,
+          items: state.items.map(item =>
+            item.product.id === product.id
+              ? { ...item, quantity: item.quantity + quantity }
+              : item
+          ),
+        };
+      }
+      
       const newItem: CartItem = {
-        ...action.payload,
-        id: `${action.payload.product.id}-${Date.now()}`,
+        id: product.id.toString(),
+        product,
+        quantity,
       };
       return { ...state, items: [...state.items, newItem] };
     }
