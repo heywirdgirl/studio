@@ -5,7 +5,7 @@ async function getProducts(): Promise<Product[]> {
   const response = await fetch('https://api.printful.com/sync/products', {
     method: 'GET',
     headers: {
-      'Authorization': `Bearer ${process.env.NEXT_PUBLIC_PRINTFUL_API_KEY}`,
+      'Authorization': `Bearer ${process.env.PRINTFUL_API_KEY}`,
       'Content-Type': 'application/json'
     },
     next: { revalidate: 3600 } // Revalidate every hour
