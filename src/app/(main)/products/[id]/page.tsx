@@ -3,10 +3,15 @@ import type { Product } from '@/lib/types';
 import { notFound } from 'next/navigation';
 
 async function getProductById(id: number): Promise<Product | null> {
+  const apiKey = process.env.PRINTFUL_API_TOKEN;
+  if (!apiKey) {
+    throw new Error("PRINTFUL_API_TOKEN is not defined in environment variables.");
+  }
+    
   const response = await fetch(`https://api.printful.com/sync/products/${id}`, {
     method: 'GET',
     headers: {
-      'Authorization': `Bearer ${process.env.PRINTFUL_API_TOKEN}`,
+      'Authorization': `Bearer ${apiKey}`,
       'Content-Type': 'application/json'
     },
     next: { revalidate: 3600 } // Revalidate every hour
@@ -16,7 +21,8 @@ async function getProductById(id: number): Promise<Product | null> {
     if (response.status === 404) {
       return null;
     }
-    throw new Error(`Failed to fetch product ${id}: ${response.statusText}`);
+    const errorBody = await response.text();
+    throw new Error(`Failed to fetch product ${id}. Status: ${response.status} ${response.statusText}. Body: ${errorBody}`);
   }
 
   const data = await response.json();
@@ -38,19 +44,31 @@ export default async function ProductPage({ params }: { params: { id: string } }
     notFound();
   }
 
-  const product = await getProductById(productId);
+  try {
+    const product = await getProductById(productId);
 
-  if (!product) {
-    notFound();
-  }
+    if (!product) {
+      notFound();
+    }
 
-  return (
-    <div className="container py-8">
-      <div className="mb-8">
-        <h1 className="text-4xl font-bold tracking-tight font-headline">{product.name}</h1>
-        <p className="mt-2 text-lg text-muted-foreground">{product.description}</p>
+    return (
+      <div className="container py-8">
+        <div className="mb-8">
+          <h1 className="text-4xl font-bold tracking-tight font-headline">{product.name}</h1>
+          <p className="mt-2 text-lg text-muted-foreground">{product.description}</p>
+        </div>
+        <ProductCustomizer product={product} />
       </div>
-      <ProductCustomizer product={product} />
-    </div>
-  );
+    );
+  } catch (e: any) {
+      return (
+        <div className="container py-8">
+            <div className="text-center py-16 text-red-500 bg-red-500/10 rounded-lg">
+                <h2 className="text-xl font-semibold">Could not load product</h2>
+                <p className="mt-2 text-sm max-w-2xl mx-auto">{e.message}</p>
+                 <p className="mt-4 font-semibold">Please check your Printful API token and Vercel environment variables.</p>
+            </div>
+        </div>
+      )
+  }
 }

@@ -2,17 +2,23 @@ import ProductCard from '@/components/products/product-card';
 import type { Product } from '@/lib/types';
 
 async function getProducts(): Promise<Product[]> {
+  const apiKey = process.env.PRINTFUL_API_TOKEN;
+  if (!apiKey) {
+    throw new Error("PRINTFUL_API_TOKEN is not defined in environment variables.");
+  }
+
   const response = await fetch('https://api.printful.com/sync/products', {
     method: 'GET',
     headers: {
-      'Authorization': `Bearer ${process.env.PRINTFUL_API_TOKEN}`,
+      'Authorization': `Bearer ${apiKey}`,
       'Content-Type': 'application/json'
     },
     next: { revalidate: 3600 } // Revalidate every hour
   });
 
   if (!response.ok) {
-    throw new Error(`Failed to fetch products: ${response.statusText}`);
+    const errorBody = await response.text();
+    throw new Error(`Failed to fetch products. Status: ${response.status} ${response.statusText}. Body: ${errorBody}`);
   }
 
   const data = await response.json();
@@ -34,6 +40,7 @@ export default async function HomePage() {
   try {
      products = await getProducts();
   } catch (e: any) {
+    console.error("Error fetching products:", e);
     error = e.message;
   }
 
@@ -48,10 +55,10 @@ export default async function HomePage() {
         </p>
       </section>
       {error ? (
-        <div className="text-center py-16 text-red-500">
+        <div className="text-center py-16 text-red-500 bg-red-500/10 rounded-lg">
             <h2 className="text-xl font-semibold">Could not fetch products</h2>
-            <p>{error}</p>
-            <p>Please check your Printful API token and try again.</p>
+            <p className="mt-2 text-sm max-w-2xl mx-auto">{error}</p>
+            <p className="mt-4 font-semibold">Please check your Printful API token and Vercel environment variables.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
