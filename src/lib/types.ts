@@ -1,24 +1,43 @@
 export interface Product {
-  id: number;
+  id: string;
+  name: string;
+  thumbnail?: string;
+  description?: string;
+  variants?: Variant[];
+}
+
+export interface Variant {
+  id: string;
   name: string;
   price: number;
-  imageUrl: string;
-  description: string;
+  image?: string;
 }
 
 export interface CartItem {
-  id: string; // Unique ID for the cart item, e.g., `${productId}-${timestamp}`
-  product: Product;
+  id: string;
+  product_id: string;
+  variant_id: string;
+  name: string;
+  price: number;
   quantity: number;
-  customization: CustomizationElement[];
+  customizations: { text?: string; image?: string };
 }
 
-export type CustomizationElement = {
-  id: string;
-  type: 'image' | 'text';
-  content: string; // For text, this is the text. For image, this is the data URL.
-  position: { x: number; y: number };
-  size: { width: number; height: number };
-  rotation: number;
-  scale: number;
-};
+export interface OrderData {
+  recipient: {
+    name: string;
+    address1: string;
+    city: string;
+    state_code?: string;
+    country_code: string;
+    zip: string;
+  };
+  items: Array<{
+    variant_id: string;
+    quantity: number;
+    name: string;
+    retail_price: number;
+    files?: Array<{ type: string; url: string }>;
+  }>;
+  external_id?: string;
+}

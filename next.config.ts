@@ -18,6 +18,13 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  
+  env: {
+    // Thêm các biến môi trường phía server
+    PAYPAL_CLIENT_SECRET: process.env.PAYPAL_CLIENT_SECRET,
+    PRINTFUL_API_TOKEN: process.env.PRINTFUL_API_TOKEN,
+  },
+  
 };
 
 export default nextConfig;
